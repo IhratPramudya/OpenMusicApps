@@ -15,13 +15,11 @@ exports.up = (pgm) => {
     },
     song_id: {
       type: 'VARCHAR(50)',
-      references: 'songs(id)',
-      onDelete: 'CASCADE',
+      notNull: true,
     },
     user_id: {
       type: 'VARCHAR(50)',
-      references: 'users(id)',
-      onDelete: 'CASCADE',
+      notNull: true,
     },
     action: {
       type: 'VARCHAR(50)',
