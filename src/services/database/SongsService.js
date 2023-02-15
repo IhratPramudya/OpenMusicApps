@@ -14,8 +14,10 @@ class SongsService {
   async addSongs({
     title, year, genre, performer, duration, albumId,
   }) {
+    if (albumId !== undefined) {
+      await this.verifyAlbumsId(albumId);
+    }
     const id = nanoid(16);
-
     const query = {
       text: 'INSERT INTO songs VALUES($1, $2, $3, $4, $5, $6, $7) RETURNING id',
       values: [id, title, year, genre, performer, duration, albumId],
@@ -51,6 +53,21 @@ class SongsService {
     return result.rows.map(songsMapById)[0];
   }
 
+  async getTitleUser({ title }) {
+    const query = {
+      text: 'SELECT * FROM songs WHERE title LIKE $1',
+      values: [`%${title}%`],
+    };
+
+    const result = await this._pool.query(query);
+
+    if (!result.rows.length) {
+      throw new NotFoundError('music dengan title tersebut tidak di temukan', 404);
+    }
+
+    return result.rows;
+  }
+
   async editSongsById(id, {
     title, year, genre, performer, duration,
   }) {
@@ -76,6 +93,19 @@ class SongsService {
 
     if (!result.rows.length) {
       throw new NotFoundError('Data id tidak di temukan', 404);
+    }
+  }
+
+  async verifyAlbumsId(id) {
+    const query = {
+      text: 'SELECT * FROM albums WHERE id = $1',
+      values: [id],
+    };
+
+    const result = await this._pool.query(query);
+
+    if (!result.rows.length) {
+      throw new NotFoundError('id album tidak di temukan', 404);
     }
   }
 }

@@ -12,6 +12,7 @@ class SongsHandler {
     this.postSongsHandler = this.postSongsHandler.bind(this);
     this.getSongsHandler = this.getSongsHandler.bind(this);
     this.getSongsByIdHandler = this.getSongsByIdHandler.bind(this);
+    this.getSongsByTitleHandler = this.getSongsByTitleHandler.bind(this);
     this.putSongsByIdHandler = this.putSongsByIdHandler.bind(this);
     this.deleteSongsByIdHandler = this.deleteSongsByIdHandler.bind(this);
   }
@@ -95,6 +96,40 @@ class SongsHandler {
         },
       });
 
+      response.code(200);
+      return response;
+    } catch (error) {
+      if (error instanceof ClientError) {
+        const response = h.response({
+          status: 'fail',
+          message: error.message,
+        });
+        response.code(error.statusCode);
+        return response;
+      }
+
+      const response = h.response({
+        status: 'error',
+        message: 'Maaf, terjadi kegagalan pada server kami.',
+      });
+      response.code(500);
+      return response;
+    }
+  }
+
+  async getSongsByTitleHandler(request, h) {
+    try {
+      const validatorResult = new this._validator(request.query);
+      validatorResult.validateTitleSongs();
+
+      const songs = await this._service.getTitleUser(request.query);
+
+      const response = h.response({
+        status: 'success',
+        data: {
+          songs,
+        },
+      });
       response.code(200);
       return response;
     } catch (error) {

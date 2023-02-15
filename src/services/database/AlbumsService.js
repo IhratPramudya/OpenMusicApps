@@ -37,8 +37,14 @@ class AlbumsService {
     if (!result.rows.length) {
       throw new NotFoundError('Album tidak di temukan', 404);
     }
+    const query2 = {
+      text: 'SELECT songs.* FROM songs LEFT JOIN albums ON "songs"."albumId" = "albums"."id" WHERE "albums"."id" = $1',
+      values: [id],
+    };
 
-    return result.rows.map(albumsMap)[0];
+    const result2 = await this._pool.query(query2);
+
+    return albumsMap(result.rows[0], result2.rows);
   }
 
   async putAlbumById(id, { name, year }) {

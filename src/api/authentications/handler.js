@@ -1,32 +1,36 @@
+/* eslint-disable max-len */
 /* eslint-disable consistent-return */
 /* eslint-disable no-underscore-dangle */
-const ClientError = require('../../customeerror/ClientError');
 
-class AlbumsHandler {
+const ClientError = require('../../customeerror/ClientError');
+const TokenManager = require('../../tokenAPI/tokenManager');
+
+/* eslint-disable no-empty-pattern */
+class AuthenticationsHandler {
   constructor(service, validator) {
     this._service = service;
     this._validator = validator;
-    this.postAlbumsHandler = this.postAlbumsHandler.bind(this);
-    this.getAlbumsByIdHandler = this.getAlbumsByIdHandler.bind(this);
-    this.putAlbumsByIdHandler = this.putAlbumsByIdHandler.bind(this);
-    this.deleteAlbumsByIdHandler = this.deleteAlbumsByIdHandler.bind(this);
+
+    this.postUsersHandler = this.postUsersHandler.bind(this);
+    this.postAuthenticationsLoginHandler = this.postAuthenticationsLoginHandler.bind(this);
+    this.putAuthenticationsRefreshTokenHandler = this.putAuthenticationsRefreshTokenHandler.bind(this);
+    this.deleteAuthenticationsHandler = this.deleteAuthenticationsHandler.bind(this);
   }
 
-  async postAlbumsHandler(request, h) {
+  async postUsersHandler(request, h) {
     try {
       const validatorValid = new this._validator(request.payload);
-      validatorValid.validateAlbums();
-      const { name, year } = request.payload;
+      validatorValid.validateUser();
 
-      const albumId = await this._service.addAlbums({ name, year });
+      const userId = await this._service.addUsers(request.payload);
 
       const response = h.response({
         status: 'success',
+        message: 'Data berhasil di tambahkan',
         data: {
-          albumId,
+          userId,
         },
       });
-
       response.code(201);
       return response;
     } catch (error) {
@@ -48,18 +52,26 @@ class AlbumsHandler {
     }
   }
 
-  async getAlbumsByIdHandler(request, h) {
+  async postAuthenticationsLoginHandler(request, h) {
     try {
-      const { id } = request.params;
+      const validatorValid = new this._validator(request.payload);
+      validatorValid.loginValidateUser();
 
-      const album = await this._service.getAlbumById(id);
+      const { id } = await this._service.veryficationUser(request.payload);
 
-      return {
+      const accessToken = TokenManager.generateAccessToken({ id });
+      const refreshToken = TokenManager.generateRefreshToken({ id });
+
+      await this._service.saveRefresToken(refreshToken);
+      const response = h.response({
         status: 'success',
         data: {
-          album,
+          accessToken,
+          refreshToken,
         },
-      };
+      });
+      response.code(201);
+      return response;
     } catch (error) {
       if (error instanceof ClientError) {
         const response = h.response({
@@ -79,18 +91,23 @@ class AlbumsHandler {
     }
   }
 
-  async putAlbumsByIdHandler(request, h) {
+  async putAuthenticationsRefreshTokenHandler(request, h) {
     try {
       const validatorValid = new this._validator(request.payload);
-      validatorValid.validateAlbums();
-      const { id } = request.params;
-      const { name, year } = request.payload;
+      validatorValid.refreshValidation();
 
-      await this._service.putAlbumById(id, { name, year });
+      const { refreshToken } = request.payload;
+
+      await this._service.verifyRefreshToken(refreshToken);
+      const { id } = TokenManager.verifyRefreshTokenManager(refreshToken);
+
+      const accessToken = TokenManager.generateAccessToken({ id });
 
       const response = h.response({
         status: 'success',
-        message: 'Album berhasil di update',
+        data: {
+          accessToken,
+        },
       });
       response.code(200);
       return response;
@@ -113,15 +130,17 @@ class AlbumsHandler {
     }
   }
 
-  async deleteAlbumsByIdHandler(request, h) {
+  async deleteAuthenticationsHandler(request, h) {
     try {
-      const { id } = request.params;
-
-      await this._service.deleteAlbumById(id);
+      const validatorValid = new this._validator(request.payload);
+      validatorValid.refreshValidation();
+      const { refreshToken } = request.payload;
+      await this._service.verifyRefreshToken(refreshToken);
+      await this._service.deleteRefreshTokenValid(refreshToken);
 
       const response = h.response({
         status: 'success',
-        message: 'Album berhasil di hapus dari database',
+        message: 'Token berhasil di hapus',
       });
       response.code(200);
       return response;
@@ -145,4 +164,4 @@ class AlbumsHandler {
   }
 }
 
-module.exports = AlbumsHandler;
+module.exports = AuthenticationsHandler;
