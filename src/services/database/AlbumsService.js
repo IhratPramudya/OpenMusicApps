@@ -47,10 +47,10 @@ class AlbumsService {
     return albumsMap(result.rows[0], result2.rows);
   }
 
-  async putAlbumById(id, { name, year }) {
+  async putAlbumById(id, name, year, cover) {
     const query = {
-      text: 'UPDATE albums SET name = $1, year = $2 WHERE id = $3 RETURNING id',
-      values: [name, year, id],
+      text: 'UPDATE albums SET name = $1, year = $2, cover = $3 WHERE id = $4 RETURNING id',
+      values: [name, year, cover, id],
     };
 
     const result = await this._pool.query(query);
@@ -58,6 +58,21 @@ class AlbumsService {
     if (!result.rows.length) {
       throw new NotFoundError('Gagal memperbarui album id tidak ditemukan', 404);
     }
+  }
+
+  async getAlbumCover(id) {
+    const query = {
+      text: 'SELECT * FROM albums WHERE id = $1',
+      values: [id],
+    };
+
+    const result = await this._pool.query(query);
+
+    if (!result.rows.length) {
+      throw new NotFoundError('Album tidak di temukan', 404);
+    }
+
+    return result.rows[0];
   }
 
   async deleteAlbumById(id) {

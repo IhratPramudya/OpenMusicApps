@@ -86,7 +86,7 @@ class AlbumsHandler {
       const { id } = request.params;
       const { name, year } = request.payload;
 
-      await this._service.putAlbumById(id, { name, year });
+      await this._service.putAlbumById(id, name, year);
 
       const response = h.response({
         status: 'success',

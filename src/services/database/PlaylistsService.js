@@ -59,7 +59,7 @@ class PlaylistsService {
     return result.rows;
   }
 
-  async getPlaylistSongs(credentialId, playlistId) {
+  async getPlaylistSongs(playlistId) {
     const query = {
       text: `
       SELECT playlists.id, playlists.name, users.username FROM playlists
@@ -71,21 +71,17 @@ class PlaylistsService {
     const result = await this._pool.query(query);
 
     if (!result.rows.length) {
-      throw new NotFoundError('playlist Tidak di temukan');
+      throw new NotFoundError('playlist Tidak di temukan', 404);
     }
 
     const songsQUery = {
       text: `SELECT songs.id, songs.title, songs.performer FROM songs LEFT JOIN playlist_songs ON "playlist_songs"."song_id" = "songs"."id"
-      LEFT JOIN playlists ON "playlists"."id" = "playlist_songs"."playlist_id" WHERE "playlist_songs"."playlist_id" = $1;
+      LEFT JOIN playlists ON "playlists"."id" = "playlist_songs"."playlist_id" WHERE "playlist_songs"."playlist_id" = $1
       `,
       values: [playlistId],
     };
 
     const result2 = await this._pool.query(songsQUery);
-
-    if (!result2.rows.length) {
-      throw new NotFoundError('Songs tidak ditemukan', 404);
-    }
 
     return playlistMap(result.rows[0], result2.rows);
   }
@@ -105,7 +101,7 @@ class PlaylistsService {
     const activitiesQuery = {
       text: `SELECT users.username, songs.title, playlist_song_activities.action, playlist_song_activities.time FROM playlist_song_activities
       LEFT JOIN songs ON "playlist_song_activities"."song_id" = "songs"."id"
-      LEFT JOIN users ON "playlist_song_activities"."user_id" = "users"."id" WHERE playlist_id = $1;
+      LEFT JOIN users ON "playlist_song_activities"."user_id" = "users"."id" WHERE playlist_id = $1
       `,
       values: [playlistId],
     };

@@ -1,7 +1,10 @@
-const albumsMap = ({ id, name, year }, songs) => ({
+const albumsMap = ({
+  id, name, year, cover,
+}, songs) => ({
   id,
   name,
   year,
+  coverUrl: cover,
   songs: [...songs],
 });
 

@@ -2,6 +2,9 @@
 const hapi = require('@hapi/hapi');
 const jwt = require('@hapi/jwt');
 require('dotenv').config();
+const path = require('path');
+const inert = require('@hapi/inert');
+const config = require('./utils/config');
 
 // Albums Plugin
 const albums = require('./api/albums');
@@ -29,19 +32,36 @@ const colaborationPlaylist = require('./api/colaboration_playlists');
 const ColaborationPlaylistService = require('./services/database/ColaborationPlaylistsService');
 const ColaborationValidatorPlaylist = require('./validator/ColaborationPlaylists');
 
+// Exports
+const exportPlaylist = require('./api/exports');
+const ProducerService = require('./services/rabbitmq/ProducerService');
+const ExportValidator = require('./validator/exports');
+
+// Uploads Image Albums
+const uploadsImageAlbums = require('./api/uploads');
+const StorageService = require('./services/storage/StorageService');
+const UploadsValidator = require('./validator/uploads');
+
+// Likes Albums
+const likeAlbums = require('./api/albums_likes');
+const LikeAlbumsService = require('./services/database/LikeAlbumsService');
+const CacheService = require('./services/redis/CacheService');
+
 const init = async () => {
   // Database Postgres Service
-
+  const cacheServices = new CacheService();
   const albumsService = new AlbumsService();
   const songsService = new SongsService();
   const authenticationsService = new AuthenticationsService();
   const colaborationPlaylistService = new ColaborationPlaylistService();
   const playlistsService = new PlaylistsService(colaborationPlaylistService);
+  const storageService = new StorageService(path.resolve(__dirname, 'api/uploads/file/images'));
+  const likeAlbumsService = new LikeAlbumsService(cacheServices);
 
   // server Connection
   const server = hapi.server({
-    port: process.env.PORT,
-    host: process.env.HOST,
+    port: config.app.port,
+    host: config.app.host,
     routes: {
       cors: {
         origin: ['*'],
@@ -53,6 +73,9 @@ const init = async () => {
   await server.register([
     {
       plugin: jwt,
+    },
+    {
+      plugin: inert,
     },
   ]);
 
@@ -110,6 +133,29 @@ const init = async () => {
         playlistService: playlistsService,
         usersService: authenticationsService,
         validator: ColaborationValidatorPlaylist,
+      },
+    },
+    {
+      plugin: exportPlaylist,
+      options: {
+        service: ProducerService,
+        playlistService: playlistsService,
+        validator: ExportValidator,
+      },
+    },
+    {
+      plugin: uploadsImageAlbums,
+      options: {
+        service: storageService,
+        albumService: albumsService,
+        validator: UploadsValidator,
+      },
+    },
+    {
+      plugin: likeAlbums,
+      options: {
+        service: likeAlbumsService,
+        albumService: albumsService,
       },
     },
   ]);
